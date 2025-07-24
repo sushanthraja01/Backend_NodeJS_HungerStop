@@ -20,7 +20,7 @@ app.use("/firm",FirmRouter);
 app.use("/product",ProductRouter);
 app.use("/uploads",express.static('uploads'))
 app.use("/",(req, res)=>{
-    res.send("<h1 align='center'>Welcome to HungerStop</h1>")
+    res.send("<h1 align='center'>Welcome to HungerStop By Sushanth</h1>")
 })
 
 
