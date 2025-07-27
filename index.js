@@ -5,9 +5,11 @@ const VenderRouter = require('./routes/VendorRouter')
 const FirmRouter = require('./routes/FirmRouter')
 const ProductRouter = require('./routes/ProductRouter')
 const app = express();
+const cors = require('cors')
 const path = require('path')
 
 app.use(express.json());
+app.use((cors()))
 app.use(express.urlencoded({extended:true}));
 
 app.use((req, res, next)=>{
