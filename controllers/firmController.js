@@ -3,19 +3,11 @@ const Product = require('../models/Product')
 const Firm = require('../models/Firm')
 const multer = require('multer')
 const path = require('path')
+const fs = require('fs');
 
 
+const upload = multer({ storage: multer.memoryStorage() });
 
-const storage = multer.diskStorage({
-    destination: function(req, file, cb) {
-        cb(null, 'uploads/'); 
-    },
-    filename: function(req, file, cb) {
-        cb(null, Date.now() + path.extname(file.originalname));
-    }
-});
-
-const upload = multer({ storage: storage });
 
 const addfirm = async(req, res) => {
     try {
@@ -26,7 +18,17 @@ const addfirm = async(req, res) => {
         if(!vendor){
             return res.status(400).json("Vendor not found")
         }
+
+        const l = vendor.firm.length
+        if(l>0){
+            return res.status(400).json("Already firm exists")
+        }
+        console.log(l)
         const checkfirm = await Firm.findOne({firmname})
+
+        if(checkfirm){
+            res.status(400).json("Already firm name exists")
+        }
         
         const firm = new Firm({
             firmname,
@@ -40,7 +42,21 @@ const addfirm = async(req, res) => {
         const savedfirm = await firm.save()
         vendor.firm.push(savedfirm._id);
         await vendor.save();
-        return res.status(200).json({mssg:"Firm added Succesfully",firmname})
+          if (req.file) {
+            const uploadsDir = path.join(__dirname, '..', 'uploads');
+            if (!fs.existsSync(uploadsDir)) {
+                fs.mkdirSync(uploadsDir);
+            }
+
+            const filename = Date.now() + path.extname(req.file.originalname);
+            const filepath = path.join(uploadsDir, filename);
+
+            fs.writeFileSync(filepath, req.file.buffer);
+
+            savedfirm.image = filename;
+            await savedfirm.save();
+        }
+        return res.status(200).json({mssg:"Firm added Succesfully",'firmname':firmname,'id':savedfirm._id})
     } catch (error) {
         console.log(error)
         return res.status(400).json(error)

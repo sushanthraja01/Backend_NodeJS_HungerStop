@@ -10,14 +10,14 @@ const productschema = mongoose.Schema({
         required:true
     },
     category:{
-        type:[{type:String,enum:["Veg","Non-Veg"]}],
+        type:[{type:String,enum:["veg","non-veg"]}],
         required:true
     },
     image:{
         type:String
     },
     bestseller:{
-        type:[{type:String,enum:["yes","no"]}],
+        type:Boolean,
         required:true
     },
     description:{

@@ -11,7 +11,7 @@ const Firmschema = mongoose.Schema({
         required:true
     },
     category:{
-        type:[{type:String, enum:["Veg","Non-Veg"]}], 
+        type:[{type:String, enum:["veg","non-veg"]}], 
         required:true
     },
     region:{

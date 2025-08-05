@@ -7,10 +7,15 @@ router.post("/addproduct/:id",productcontroller.addproduct)
 router.get("/productsbyfirm/:productId",productcontroller.getproductbyfirm)
 router.delete("/:productId",productcontroller.delprodbyid)
 
-router.get("/uploads/:imagename",async(req, res) => {
+router.get("/uploads/:imagename", async (req, res) => {
     const imgname = req.params.imagename;
-    res.headersSent('Content-type','image/jpeg')
-    res.sendFile(path.join(__dirname,'..','uploads',imgname))
+    const filepath = path.join(__dirname, '..', 'uploads', imgname);
+    if (fs.existsSync(filepath)) {
+        res.setHeader('Content-Type', 'image/jpeg');  // or detect type dynamically
+        res.sendFile(filepath);
+    } else {
+        res.status(404).send("Image not found");
+    }
 });
 
 module.exports = router;

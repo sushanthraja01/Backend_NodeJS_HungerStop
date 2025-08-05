@@ -35,16 +35,16 @@ const vendorLogin = async(req, res) => {
         const vendor = await Vendor.findOne({username});
 
         if(!vendor || !(await bcrypt.compare(password,vendor.password))){
-            res.status(400).json({error:"Invalid Username or Password"});
+            res.status(400).json("Invalid Username or Password");
         }else{
             const secretkey = process.env.JWT_SECRET;
             const token = jwt.sign({ vendorId: vendor._id },process.env.JWT_SECRET,{ expiresIn: "1h" });
-
-            res.status(200).json({success:"Login Successful",token});
+            const id = vendor._id
+            res.status(200).json({success:"Login Successful",token,id});
         }
     }catch(error){
         console.log(error);
-        return res.status(400).json({mssg:"Internal Server error"})
+        return res.status(400).json("Internal Server error")
     }
 }
 
