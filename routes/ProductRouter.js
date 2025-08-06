@@ -4,7 +4,7 @@ const productcontroller = require('../controllers/productController')
 const router = express.Router();
 
 router.post("/addproduct/:id",productcontroller.addproduct)
-router.get("/productsbyfirm/:productId",productcontroller.getproductbyfirm)
+router.get("/productsbyfirm/:firmId",productcontroller.getproductbyfirm)
 router.delete("/:productId",productcontroller.delprodbyid)
 
 router.get("/uploads/:imagename", async (req, res) => {

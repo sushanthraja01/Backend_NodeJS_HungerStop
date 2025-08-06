@@ -52,14 +52,17 @@ const addproduct = async(req, res) => {
 
 const getproductbyfirm = async(req, res) => {
     try {
-        const firmId = req.params.productId
+        const firmId = req.params.firmId
         const firm = await Firm.findById(firmId)
         if(!firm){
             return res.status(400).json("Firm not found")
         }
         const firmname = firm.firmname
         const products = await Product.find({firm: firm._id})
-        res.status(200).json({firmname, products})
+        if(products.length == 0){
+            res.status(200).json("No products")
+        }
+        return res.status(200).json(products)
     } catch (error) {
         console.error(error)
         return res.status(404).json("Internal server error")
