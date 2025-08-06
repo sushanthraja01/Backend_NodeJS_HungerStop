@@ -9,10 +9,23 @@ const cors = require('cors')
 const path = require('path')
 
 app.use(express.json());
+const cors = require('cors');
+
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://hungerspot-backend-dashboard.vercel.app'
+];
+
 app.use(cors({
-    origin: 'http://localhost:5173',
-    credentials:true
+  origin: function(origin, callback) {
+    if (allowedOrigins.indexOf(origin) !== -1 || !origin) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  }
 }));
+
 app.use(express.urlencoded({extended:true}));
 
 app.use((req, res, next)=>{
