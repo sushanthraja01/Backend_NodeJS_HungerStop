@@ -1,6 +1,5 @@
-const mongoose = require('mongoose')
-
-const Firmschema = mongoose.Schema({
+const mongoose = require('mongoose');
+const schema = mongoose.Schema({
     firmname:{
         type:String,
         required:true,
@@ -18,12 +17,11 @@ const Firmschema = mongoose.Schema({
         type:[{type:String, enum:["south-indian","north-india","chinese","bakery"]}], 
         required:true
     },
-    vendor:[
+    vendor:
         {
             type:mongoose.Schema.Types.ObjectId,
             ref:"Vendor"
-        }
-    ],
+        },
     product:[
         {
             type:mongoose.Schema.Types.ObjectId,
@@ -43,10 +41,10 @@ const Firmschema = mongoose.Schema({
         type:String,
     },
     anual_income:{
-        type:Number
+        type:Number,
     }
-});
+})
 
-const Firm = mongoose.model("Firm",Firmschema);
+const model = mongoose.model("Pfirm",schema);
 
-module.exports = Firm;
+module.exports = model;

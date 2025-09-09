@@ -4,6 +4,8 @@ const multer = require('multer')
 const path = require('path')
 const fs = require('fs')
 
+
+
 const storage = multer.diskStorage({
     destination: (req, file, cb) => {
         cb(null, path.join(__dirname, '..', 'uploads'));
@@ -17,7 +19,6 @@ const upload = multer({ storage: storage });
 
 
 const addproduct = async(req, res) => {
-
     try {
         const {productname,price,category,bestseller,description} = req.body
 

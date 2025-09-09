@@ -1,10 +1,20 @@
 const express = require('express')
 const verifyToken = require('../middleware/verifytoken')
-const firmcontroller = require('../controllers/firmController')
+const { reqaddfirm, delfrimbyid, upload, acceptreq, declinereq } = require("../controllers/firmController");
 const router = express.Router();
 
-router.post("/add-firm",verifyToken,firmcontroller.addfirm)
-router.delete("/:id",firmcontroller.delfrimbyid)
+router.post("/req/add-firm",verifyToken,upload.fields([
+    { name: 'fssai', maxCount: 1 },
+    { name: 'gst', maxCount: 1 },
+    { name: 'shop_license', maxCount: 1 },
+    { name: 'image', maxCount: 1 },
+    { name: 'anual_income', maxCount: 1 }]
+),reqaddfirm)
+router.get("/accept/:id",acceptreq);
+router.post("/decline/:id",declinereq);
+
+
+router.delete("/:id",delfrimbyid)
 
 router.get("/uploads/:imagename",async(req, res) => {
     const imgname = req.params.imagename;
