@@ -77,19 +77,26 @@ const reqaddfirm = async(req, res) => {
         html: `
         <div style="font-family: Arial, sans-serif; color: #333;">
           <h2>Firm Request</h2>
+          <p>A new firm request has been submitted by <b>${vendor.name}</b>.</p>
           <br>
-        </div>
-        <br /><br />
-        <a href="${base}/firm/accept/${savedfirm._id}" 
-             style="background:green;color:white;padding:10px 15px;text-decoration:none;border-radius:5px;">
-             Accept
+
+          <a href="${base}/firm/accept/${savedfirm._id}" 
+             style="display:inline-block; background:green; color:white; padding:10px 20px; 
+                    text-decoration:none; border-radius:5px; font-weight:bold;">
+             ✅ Accept
           </a>
+
           <a href="${base}/firm/decline/${savedfirm._id}" 
-             style="background:red;color:white;padding:10px 15px;text-decoration:none;border-radius:5px;margin-left:10px;">
-             Decline
-          </a><hr>
+             style="display:inline-block; background:red; color:white; padding:10px 20px; 
+                    text-decoration:none; border-radius:5px; font-weight:bold; margin-left:10px;">
+             ❌ Decline
+          </a>
+
+          <hr>
           <small>Sent by Sushanth's Node.js app</small>
-      `,
+          </div>
+        `,
+
       attachments:
         Object.values(req.files).flat().map(file => ({
           filename: file.originalname,
