@@ -4,6 +4,7 @@ const Firm = require('../models/Firm')
 const Pfirm = require('../models/Pfirm')
 const multer = require('multer')
 const nodemailer = require('nodemailer')
+const cloudinary = require('cloudinary').v2
 const path = require('path')
 const fs = require('fs');
 const e = require('express')
@@ -12,6 +13,36 @@ require('dotenv').config()
 const storage = multer.memoryStorage();
 const upload = multer({storage:storage})
 
+cloudinary.config({
+    cloud_name: process.env.CLOUD_NAME,
+    api_key: process.env.api_key,
+    api_secret: process.env.api_secret
+})
+
+const delfc = async(publicid) => {
+    try {
+        const resource = await cloudinary.api.resource(publicid);
+        await cloudinary.uploader.destroy(resource.public_id, { resource_type: resource.resource_type });
+
+    } catch (error) {
+        console.error(error)
+    }
+}
+
+const utc = (fileBuffer, fn, folder="hsfirm") => {
+    const mfn = fn.replace(/\s+/g, "_");
+    return new Promise((resolve,reject)=>{
+        const stream = cloudinary.uploader.upload_stream(
+            {folder,resource_type:"auto",public_id:mfn},
+            (error,result)=>{if (error) return reject(error)
+                return resolve(result)
+            }
+            
+        )
+        stream.end(fileBuffer)
+    })
+}
+
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
@@ -19,6 +50,7 @@ const transporter = nodemailer.createTransport({
         pass: "jrqw mnii fhdj acki"  
     }
 });
+
 
 const reqaddfirm = async(req, res) => {
     try {
@@ -52,19 +84,15 @@ const reqaddfirm = async(req, res) => {
             anual_income:undefined
         })
         const savedfirm = await pfirm.save()
-        const docnames = {};
-        if(req.files && Object.keys(req.files).length > 0){
-            const udir = path.join(__dirname,"..","samuploads");
-            if(!fs.existsSync(udir)){
-                fs.mkdirSync(udir);
-            }
-            for(const field in req.files){
+        docnames={}
+        if (req.files && Object.keys(req.files).length > 0) {
+            for (const field in req.files) {
                 const filesArray = req.files[field];
-                for(const file of filesArray){
-                    const filename = `${vendorId}_${file.originalname}`;
-                    const filePath = path.join(udir, filename);
-                    fs.writeFileSync(filePath, file.buffer);
-                    docnames[field] = filename;
+                for (const file of filesArray) {
+                    const safefirm = pfirm.firmname.replace(/\s+/g, "_");
+                    const fn = `${vendor._id}_${safefirm}_${file.fieldname}`
+                    const uploadResult = await utc(file.buffer, fn);
+                    docnames[field] = uploadResult.public_id; 
                 }
             }
             Object.assign(savedfirm, docnames);
@@ -98,10 +126,10 @@ const reqaddfirm = async(req, res) => {
         `,
 
       attachments:
-        Object.values(req.files).flat().map(file => ({
+        req.files?Object.values(req.files).flat().map(file => ({
           filename: file.originalname,
           content: file.buffer
-        })),
+        })):[],
     };
 
     let info = await transporter.sendMail(mailOptions);
@@ -148,40 +176,63 @@ const acceptreq = async(req, res) => {
         const pfirm = await Pfirm.findById(firmId)
         if(!pfirm){
             if(await Firm.findById(firmId)){
-                return res.status(400).json(`<h1>Firm request already accepted</h1>`)
+                return res.status(400).send(`<h1 align="center">Firm request already accepted</h1>`)
             }else{
-                return res.status(400).json(`<h1>Firm request not found</h1>`)
+                return res.status(400).send(`<h1 align="center">Firm request not found or already declined</h1>`)
             }
         }
         const vendorId = pfirm.vendor.toString()
         const vendor = await Vendor.findById(vendorId)
         const newfirm = new Firm(pfirm.toObject());
         await newfirm.save()
-        const newpath = path.join(__dirname,"..","uploads");
-        if(!fs.existsSync(newpath)){
-            fs.mkdirSync(newpath);
-        }
-        for(const field of ["image","fssai","gst","shop_license","anual_income"]){
-                if(pfirm[field]!==undefined){
-                    const oldfile = path.join(__dirname,"..","samuploads",pfirm[field]);
-                    const newname = `${vendorId}_${newfirm._id}_${pfirm[field]}`;
-                    fs.writeFileSync(path.join(newpath,newname),fs.readFileSync(oldfile));
-                    fs.unlinkSync(oldfile);
-                    newfirm[field] = newname;
-                }
-            }
-        await newfirm.save()
         vendor.firm.push(newfirm._id)
         await vendor.save()
         await Pfirm.findByIdAndDelete(firmId)
-        return res.status(200).json(`<h1>Firm request accepted successfully</h1>`)
+        return res.status(200).send(`<h1 align="center">Firm request accepted successfully</h1>`)
     } catch (error) {
         console.error(error)
-        return res.status(400).json(`<h1>${error}</h1>`)
+        return res.status(400).jsend(`<h1 align="center">${error}</h1>`)
     }
 }
 
 const declinereq = async(req, res) => {
+    try {
+        const firmId = req.params.id
+        const pfirm = await Pfirm.findById(firmId)
+        if(!pfirm){
+            if(await Firm.findById(firmId)){
+                return res.status(400).json(`<h1 align = "center">Firm request already accepted</h1>`)
+            }else{
+                return res.status(400).json(`<h1 align = "center">Firm request not found</h1>`)
+            }
+        }
+        const firmname = pfirm.firmname;
+        const vendor = await Vendor.findById(pfirm.vendor)
+        if(!vendor){
+            return res.status(400).send(`<h1 align = "center">Vendor not found</h1>`)
+        }
+        for(const field of ["image","fssai","gst","shop_license","anual_income"]){
+            if(pfirm[field]){
+                await delfc(pfirm[field])
+            }
+        }
+        await Pfirm.findByIdAndDelete(firmId);
+        let mailoptions = {
+            from: '"Hungerspot Bot"',
+            to: vendor.email,
+            subject: "A Response to the firm request "+firmname,
+            html:`
+                <div>
+                    <p>Sorry your firm request gets cancelled.Try again with all correct documents hope next time the request will be accepted</p>
+                    <p>Thank you for using Humger Spot</p>
+                </div>
+            `
+        }
+        await transporter.sendMail(mailoptions);
+        return res.status(200).send(`<h1 align = "center">Request declined successfully</h1>`)
+    } catch (error) {
+        return res.status(400).send(`<h1 align = "center">${error}</h1>`)
+    }
 }
 
 module.exports = { reqaddfirm, delfrimbyid, upload, acceptreq, declinereq }

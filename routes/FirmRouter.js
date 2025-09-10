@@ -11,8 +11,8 @@ router.post("/req/add-firm",verifyToken,upload.fields([
     { name: 'anual_income', maxCount: 1 }]
 ),reqaddfirm)
 router.get("/accept/:id",acceptreq);
-router.post("/decline/:id",declinereq);
 
+router.get("/decline/:id",declinereq);
 
 router.delete("/:id",delfrimbyid)
 
