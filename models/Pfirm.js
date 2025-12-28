@@ -10,18 +10,15 @@ const schema = mongoose.Schema({
         required:true
     },
     category:{
-        type:[{type:String, enum:["veg","non-veg"]}], 
-        required:true
-    },
-    region:{
-        type:[{type:String, enum:["south-indian","north-india","chinese","bakery"]}], 
+        type:String,
+        enum:["veg","non-veg"], 
         required:true
     },
     vendor:
-        {
-            type:mongoose.Schema.Types.ObjectId,
-            ref:"Vendor"
-        },
+    {
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Vendor"
+    },
     product:[
         {
             type:mongoose.Schema.Types.ObjectId,
@@ -41,7 +38,7 @@ const schema = mongoose.Schema({
         type:String,
     },
     anual_income:{
-        type:Number,
+        type:String
     }
 })
 

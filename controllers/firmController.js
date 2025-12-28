@@ -4,7 +4,10 @@ const Firm = require('../models/Firm')
 const Pfirm = require('../models/Pfirm')
 const multer = require('multer')
 const nodemailer = require('nodemailer')
+const mongoose = require('mongoose')
 const cloudinary = require('cloudinary').v2
+const crypto = require('crypto')
+const bcrypt = require('bcrypt')
 const path = require('path')
 const fs = require('fs');
 const e = require('express')
@@ -37,7 +40,6 @@ const utc = (fileBuffer, fn, folder="hsfirm") => {
             (error,result)=>{if (error) return reject(error)
                 return resolve(result)
             }
-            
         )
         stream.end(fileBuffer)
     })
@@ -46,21 +48,30 @@ const utc = (fileBuffer, fn, folder="hsfirm") => {
 const transporter = nodemailer.createTransport({
     service: 'gmail',
     auth: {
-        user: "rajasaidathasushanth2006@gmail.com",
-        pass: "jrqw mnii fhdj acki"  
+        user: process.env.email_user,
+        pass: process.env.email_pass  
     }
 });
 
-
 const reqaddfirm = async(req, res) => {
     try {
+        const session = await mongoose.startSession();
+        session.startTransaction();
         const base = process.env.BASE_URL;
         const {firmname, category, area, region} = req.body
+
         const vendorId =  req.vendorId
         const vendor = await Vendor.findById(vendorId)
         if(!vendor){
             return res.status(400).json("Vendor not found")
+        }else if(vendor.role !== "mainvendor"){
+            return res.status(400).json(`Only main vendor can add firm.But your role is ${vendor.role}.To add firm change your role`)
         }
+
+        if(vendor.verified==="no"){
+            return res.status(400).json("Your account is not verified.Verify your account first then request a  firm")
+        }
+
         const checkfirm1 = await Pfirm.findOne({firmname:firmname})
         if(checkfirm1 && checkfirm1.vendor.toString() === vendorId.toString()){
             return res.status(400).json("Request is in pending")
@@ -71,6 +82,7 @@ const reqaddfirm = async(req, res) => {
         if(checkfirm){
             return res.status(400).json("Already firm name exists")
         }
+
         const pfirm = new Pfirm({
             firmname,
             category,
@@ -83,25 +95,49 @@ const reqaddfirm = async(req, res) => {
             shop_license:undefined,
             anual_income:undefined
         })
-        const savedfirm = await pfirm.save()
-        docnames={}
+        const savedfirm = await pfirm.save({session});
+        
+        let uf;
+        const uploadpromises = []
         if (req.files && Object.keys(req.files).length > 0) {
             for (const field in req.files) {
-                const filesArray = req.files[field];
-                for (const file of filesArray) {
+                for (const file of req.files[field]) {
                     const safefirm = pfirm.firmname.replace(/\s+/g, "_");
                     const fn = `${vendor._id}_${safefirm}_${file.fieldname}`
-                    const uploadResult = await utc(file.buffer, fn);
-                    docnames[field] = uploadResult.public_id; 
+                    uploadpromises.push(
+                        utc(file.buffer, fn).then((r)=>({
+                            field,
+                            publicid : r.public_id
+                        }))
+                    )
                 }
             }
-            Object.assign(savedfirm, docnames);
         }
-        await savedfirm.save();
+
+        try {
+            uf = await Promise.all(uploadpromises);
+        } catch (error) {
+            for(const file of uf || []){
+                await delfc(file.publicid)
+            }
+            await session.abortTransaction();
+            session.endSession();
+            return res.status(400).json({
+                error: "Failed to upload documents to Cloudinary",
+            });
+        }
+
+        let docnames={}
+        for(const doc of uf){
+            docnames[doc.field] = doc.publicid
+        }
+        Object.assign(savedfirm,docnames)
+        await savedfirm.save({session})
+
         let mailOptions = {
-        from: '"HungerSpot Bot"',
+        from: `"HungerStop Bot" <${process.env.email_user}>`,
         to: "rajasaidathasushanth2006@gmail.com",
-        subject: "A firm request from " + vendor.name,
+        subject: `A firm request from ${vendor.name}`,
         html: `
         <div style="font-family: Arial, sans-serif; color: #333;">
           <h2>Firm Request</h2>
@@ -111,13 +147,13 @@ const reqaddfirm = async(req, res) => {
           <a href="${base}/firm/accept/${savedfirm._id}" 
              style="display:inline-block; background:green; color:white; padding:10px 20px; 
                     text-decoration:none; border-radius:5px; font-weight:bold;">
-             ✅ Accept
+              Accept
           </a>
 
           <a href="${base}/firm/decline/${savedfirm._id}" 
              style="display:inline-block; background:red; color:white; padding:10px 20px; 
                     text-decoration:none; border-radius:5px; font-weight:bold; margin-left:10px;">
-             ❌ Decline
+              Decline
           </a>
 
           <hr>
@@ -125,15 +161,26 @@ const reqaddfirm = async(req, res) => {
           </div>
         `,
 
-      attachments:
-        req.files?Object.values(req.files).flat().map(file => ({
-          filename: file.originalname,
-          content: file.buffer
-        })):[],
-    };
+          attachments:
+            req.files?Object.values(req.files).flat().map(file => ({
+              filename: file.originalname,
+              content: file.buffer
+            })):[],
+        };
 
-    let info = await transporter.sendMail(mailOptions);
-    return res.status(200).json({"details":"Firm request sent successfully", savedfirm, info})
+        try {
+            let info = await transporter.sendMail(mailOptions);
+            await session.commitTransaction();
+            session.endSession();
+            return res.status(200).json({"details":"Firm request sent successfully", savedfirm, info})
+        } catch (error) {
+            await session.abortTransaction()
+            session.endSession()
+            for(const doc of uf){
+                await delfc(doc.publicid)
+            }
+            return res.status(400).json("Error Sending an email")
+        }
     } catch (error) {
         console.log(error)
         return res.status(400).json(error)
@@ -144,8 +191,7 @@ const delfrimbyid = async(req, res) => {
     try {
         const firmId = req.params.id
         const firm = await Firm.findById(firmId)
-        const vid = firm.vendor[0]
-        const vendor = await Vendor.findById(vid)
+        const vendor = await Vendor.findById(firm.vendor)
         const prods = await Product.find({_id: {$in:firm.product}})
         if(!firm || !vendor){
             return res.status(400).json("Firm not found or Vendor not set to firm")
@@ -155,14 +201,12 @@ const delfrimbyid = async(req, res) => {
         const pnames = prods.map(p => p.productname)
         await Product.deleteMany({_id:{$in:prods}})
         await Firm.findByIdAndDelete(firmId);
+        await Vendor.deleteMany({$or:[{email: fname},{username: fname}]})
         await Vendor.updateOne(
-            {_id: vid},
+            {_id: firm.vendor},
             {$pull: {firm:firmId}}
         )
-
         res.status(200).json({"details":`Firm ${fname} is deleted successfully by the vendor ${vname} and also all products ${pnames}`})
-
-
     } catch (error) {
         console.log(error)
         return res.status(400).json(error)
@@ -172,8 +216,10 @@ const delfrimbyid = async(req, res) => {
 
 const acceptreq = async(req, res) => {
     try {
-        const firmId = req.params.id
+        const firmId = req.params.id;
         const pfirm = await Pfirm.findById(firmId)
+        const session = await mongoose.startSession();
+        session.startTransaction();
         if(!pfirm){
             if(await Firm.findById(firmId)){
                 return res.status(400).send(`<h1 align="center">Firm request already accepted</h1>`)
@@ -184,14 +230,79 @@ const acceptreq = async(req, res) => {
         const vendorId = pfirm.vendor.toString()
         const vendor = await Vendor.findById(vendorId)
         const newfirm = new Firm(pfirm.toObject());
-        await newfirm.save()
+        const savedfirm = await newfirm.save({session})
         vendor.firm.push(newfirm._id)
-        await vendor.save()
-        await Pfirm.findByIdAndDelete(firmId)
-        return res.status(200).send(`<h1 align="center">Firm request accepted successfully</h1>`)
+        await vendor.save({session})
+        await Pfirm.findByIdAndDelete(firmId,{session})
+        let gpass,hpass;
+        let nsv
+        try {
+            gpass = crypto.randomBytes(8).toString("hex")
+            hpass = await bcrypt.hash(gpass,10)
+            console.log(vendor.phoneno)
+            const nv = new Vendor({
+                name:vendor.name,
+                username:savedfirm.firmname,
+                email:savedfirm.firmname,
+                phoneno:vendor.phoneno,
+                password:hpass,
+                role:"vendor",
+                vendor:vendor._id,
+                token:""
+            });
+            nsv = await nv.save({session});
+        } catch (error) {
+            await session.abortTransaction();
+            await session.endSession();
+            return res.status(400).json(error)
+        }
+        try {
+            let mailoptions = {
+                from: `"HungerStop Bot" <${process.env.email_user}>`,
+                to:vendor.email,
+                subject: `Response to requested firm ${savedfirm.firmname}`,
+                html: `
+                    <div>
+                        <p>Congratulations! Your firm request for <b>${savedfirm.firmname}</b> has been accepted successfully.</p>
+                        <p>Since your firm request has been approved, we are providing you with credentials to log in and perform actions such as adding and removing items and handling requests.</p>
+                        <p>However, the credentials below do not grant access to certain major features, such as removing the firm or changing opening and closing times. They only allow limited access, which makes them safe to share with your firm manager.</p>
+                        <p>Whenever you log in to HungerStop Partnership with your owner credentials, you will have full access to all the firms you own.</p>
+                        <p><b>Credentials:</b></p>
+                        <table style="background-color: lightgreen; padding: 10px;">
+                            <tr>
+                                <td>
+                                    Username: ${nsv.email}<br />
+                                    Password: ${gpass}
+                                </td>
+                            </tr>
+                        </table>
+                        <p>Once you log in with the above account, you can change the password at any time.</p>
+                        <p>Thank you for using HungerStop!</p>
+                        <br />
+                        <p>For any queries, simply reply to this email.</p>
+                    </div>
+                `
+            }
+            await transporter.sendMail(mailoptions);
+        } catch (error) {
+            await session.abortTransaction();
+            await session.endSession();
+            return res.status(400).json(error)
+        }
+        await session.commitTransaction();
+        await session.endSession()
+        return res.status(200).send(`
+            <h1 align="center">Firm request accepted successfully</h1>
+            <hr />
+            <p>A firm request from ${savedfirm.firmname} is accepted succesfully.</p>
+            <p>A vendor ${vendor.name} is requested this firm.</p>
+            <p>username : ${vendor.username}</p>
+            <p>email : ${vendor.email}</p>
+            <p>phone no : ${vendor.phoneno}</p>
+            `);
     } catch (error) {
         console.error(error)
-        return res.status(400).jsend(`<h1 align="center">${error}</h1>`)
+        return res.status(400).send(`<h1 align="center">${error}</h1>`)
     }
 }
 
@@ -201,9 +312,9 @@ const declinereq = async(req, res) => {
         const pfirm = await Pfirm.findById(firmId)
         if(!pfirm){
             if(await Firm.findById(firmId)){
-                return res.status(400).json(`<h1 align = "center">Firm request already accepted</h1>`)
+                return res.status(400).send(`<h1 align = "center">Firm request already accepted</h1>`)
             }else{
-                return res.status(400).json(`<h1 align = "center">Firm request not found</h1>`)
+                return res.status(400).send(`<h1 align = "center">Firm request not found</h1>`)
             }
         }
         const firmname = pfirm.firmname;
@@ -211,28 +322,62 @@ const declinereq = async(req, res) => {
         if(!vendor){
             return res.status(400).send(`<h1 align = "center">Vendor not found</h1>`)
         }
-        for(const field of ["image","fssai","gst","shop_license","anual_income"]){
-            if(pfirm[field]){
-                await delfc(pfirm[field])
+        const session = await mongoose.startSession();
+        session.startTransaction();
+        try {
+            await Pfirm.findByIdAndDelete(firmId,{session});
+        } catch (error) {
+            await session.abortTransaction();
+            await session.endSession();
+            return res.status(400).json(error)
+        }
+        try {
+            for(const field of ["image","fssai","gst","shop_license","anual_income"]){
+                if(pfirm[field]){
+                    await delfc(pfirm[field])
+                }
             }
+        } catch (error) {
+            await session.abortTransaction();
+            await session.endSession();
+            return res.status(400).json(error)
         }
-        await Pfirm.findByIdAndDelete(firmId);
-        let mailoptions = {
-            from: '"Hungerspot Bot"',
-            to: vendor.email,
-            subject: "A Response to the firm request "+firmname,
-            html:`
-                <div>
-                    <p>Sorry your firm request gets cancelled.Try again with all correct documents hope next time the request will be accepted</p>
-                    <p>Thank you for using Humger Spot</p>
-                </div>
-            `
+        try {
+            let mailoptions = {
+                from: `"HungerStop Bot" <${process.env.email_user}>`,
+                to: vendor.email,
+                subject: "A Response to the firm request "+firmname,
+                html:`
+                    <div>
+                        <p>Sorry your firm request gets cancelled.Try again with all correct documents hope next time the request will be accepted</p>
+                        <p>Thank you for using Hunger Stop</p>
+                    </div>
+                `
+            }
+            await transporter.sendMail(mailoptions);
+        } catch (error) {
+            await session.abortTransaction();
+            await session.endSession();
+            return res.status(400).json(error)
         }
-        await transporter.sendMail(mailoptions);
+        await session.commitTransaction();
+            await session.endSession();
         return res.status(200).send(`<h1 align = "center">Request declined successfully</h1>`)
     } catch (error) {
         return res.status(400).send(`<h1 align = "center">${error}</h1>`)
     }
 }
 
-module.exports = { reqaddfirm, delfrimbyid, upload, acceptreq, declinereq }
+const getallhotels = async(req,res) =>{
+    try {
+        const h = await Firm.find();
+        if(h.length===0){
+            return res.status(200).json("No Hotels Available")
+        }
+        return res.status(200).json(h)
+    } catch (error) {
+        return res.status(400).json("Internal Server Error")
+    }
+}
+
+module.exports = { reqaddfirm, delfrimbyid, upload, acceptreq, declinereq, getallhotels }

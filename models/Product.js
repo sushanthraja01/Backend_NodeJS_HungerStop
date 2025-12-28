@@ -6,30 +6,35 @@ const productschema = mongoose.Schema({
         required:true
     },
     price:{
-        type:String,
+        type:Number,
         required:true
     },
     category:{
-        type:[{type:String,enum:["veg","non-veg"]}],
+        type:String,
+        enum:['veg','nonveg'],
         required:true
     },
     image:{
-        type:String
-    },
-    bestseller:{
-        type:Boolean,
-        required:true
-    },
-    description:{
         type:String,
         required:true
     },
-    firm:[
-        {
-            type:mongoose.Schema.Types.ObjectId,
-            ref:"Firm"
-        }
-    ]
+    itemtype:{
+        type:String,
+        enum:["starters","drinks","tiffins","meals","dinnner"],
+        required:true
+    },
+    quantity:{
+        type:Number,
+    },
+    region:{
+        type:[{type:String, enum:["south-indian","north-india","chinese","bakery"]}], 
+        required:true
+    },
+    firm:
+    {
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Firm"
+    }
 })
 
 const Product = mongoose.model('Product',productschema)

@@ -11,19 +11,15 @@ const Firmschema = mongoose.Schema({
         required:true
     },
     category:{
-        type:[{type:String, enum:["veg","non-veg"]}], 
+        type:String,
+        enum:["veg","non-veg"], 
         required:true
     },
-    region:{
-        type:[{type:String, enum:["south-indian","north-india","chinese","bakery"]}], 
-        required:true
+    vendor:
+    {
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"Vendor"
     },
-    vendor:[
-        {
-            type:mongoose.Schema.Types.ObjectId,
-            ref:"Vendor"
-        }
-    ],
     product:[
         {
             type:mongoose.Schema.Types.ObjectId,
@@ -32,18 +28,22 @@ const Firmschema = mongoose.Schema({
     ],
     image:{
         type:String,
+        required:true
     },
     fssai:{
         type:String,
+        required:true
     },
     gst:{
         type:String,
+        required:true
     },
     shop_license:{
         type:String,
+        required:true
     },
     anual_income:{
-        type:Number
+        type:String
     }
 });
 

@@ -1,6 +1,6 @@
 const express = require('express')
 const verifyToken = require('../middleware/verifytoken')
-const { reqaddfirm, delfrimbyid, upload, acceptreq, declinereq } = require("../controllers/firmController");
+const { reqaddfirm, delfrimbyid, upload, acceptreq, declinereq,getallhotels } = require("../controllers/firmController");
 const router = express.Router();
 
 router.post("/req/add-firm",verifyToken,upload.fields([
@@ -16,10 +16,6 @@ router.get("/decline/:id",declinereq);
 
 router.delete("/:id",delfrimbyid)
 
-router.get("/uploads/:imagename",async(req, res) => {
-    const imgname = req.params.imagename;
-    res.headersSent('Content-type','image/jpeg')
-    res.sendFile(path.join(__dirname,'..','uploads',imgname))
-});
+router.get("/geth",getallhotels)
 
 module.exports = router

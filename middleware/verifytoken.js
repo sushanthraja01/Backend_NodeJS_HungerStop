@@ -13,8 +13,11 @@ const verifyToken = async(req, res, next) => {
         const vendor = await Vendor.findById(decodded.vendorId)
         if(!vendor){
             return res.status(404).json("Vendor not Found")
+        }else if(vendor.token !== token){
+            return res.status(400).json({'mssg':"Login on another device","token":token})
         }
         req.vendorId = vendor._id;
+        req.valid = true;
         next();
     } catch (error) {
         console.log(error);

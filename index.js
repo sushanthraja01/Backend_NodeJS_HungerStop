@@ -1,4 +1,3 @@
-require('dotenv').config();
 const express = require('express');
 const mongoose = require('mongoose');
 const VenderRouter = require('./routes/VendorRouter');
@@ -7,12 +6,15 @@ const ProductRouter = require('./routes/ProductRouter');
 const app = express();
 const cors = require('cors'); 
 const path = require('path');
+const Vendor = require('./models/Vendor');
+require('dotenv').config();
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 const allowedOrigins = [
   'http://localhost:5173',
+  'http://localhost:5174',
   'https://hungerspot-backend-dashboard.vercel.app'
 ];
 
@@ -39,10 +41,8 @@ app.use("/product", ProductRouter);
 app.use("/uploads", express.static('uploads'));
 
 app.use("/", (req, res) => {
-  res.send("<h1 align='center'>Welcome to HungerStop</h1>");
+  res.send("<h1 align='center'>Welcome to HungerStop Backend Site</h1>");
 });
-
-console.log("Resolved Mongo URI at runtime:", process.env.MONGO_URI);
 
 
 mongoose.connect(process.env.MONGO_URI)
@@ -50,7 +50,8 @@ mongoose.connect(process.env.MONGO_URI)
     app.listen(process.env.PORT, () => {
       console.log(`Server started and listening at port ${process.env.PORT}`);
       console.log("Connected to database");
-      console.log("its dirnamein index.js",__dirname)
+      console.log("its dirnamein index.js",__dirname);
+      console.log("Resolved Mongo URI at runtime:", process.env.MONGO_URI);
     });
   })
   .catch((error) => {
