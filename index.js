@@ -16,7 +16,7 @@ const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://hungerspot-backend-dashboard.vercel.app',
-  'https://hungerstop-rsds.vercel.app/'
+  'https://hungerstop-rsds.vercel.app'
 ];
 
 app.use(cors({
