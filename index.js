@@ -15,7 +15,8 @@ app.use(express.urlencoded({ extended: true }));
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://hungerspot-backend-dashboard.vercel.app'
+  'https://hungerspot-backend-dashboard.vercel.app',
+  'https://hungerstop-rsds.vercel.app/'
 ];
 
 app.use(cors({
