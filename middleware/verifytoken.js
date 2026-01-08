@@ -4,7 +4,8 @@ require('dotenv').config()
 
 const verifyToken = async(req, res, next) => {
     const secretkey = process.env.JWT_SECRET;
-    const token = req.headers.token;
+    const token = req.headers.token || req.cookies.token;
+    console.log(token)
     if(!token){
         return res.status(400).json("Token is required")
     }

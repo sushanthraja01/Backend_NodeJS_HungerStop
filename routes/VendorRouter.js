@@ -2,10 +2,13 @@ const express = require('express');
 const router = express.Router();
 const vendorController = require('../controllers/vendorController');
 const verifyToken = require('../middleware/verifytoken');
+const passport = require("passport")
 
 
 router.post("/register",vendorController.vendorRegistration);
 router.post("/login",vendorController.vendorLogin);
+router.get("/auth/google",passport.authenticate("google", { scope: ["profile", "email"] }));
+router.get("/auth/google/callback",passport.authenticate("google", { session: false }),vendorController.callback);
 router.patch("/changerole",vendorController.crole);
 router.patch("/changepassword",verifyToken,vendorController.cpass);
 router.patch("/reqotp",verifyToken,vendorController.reqotp);

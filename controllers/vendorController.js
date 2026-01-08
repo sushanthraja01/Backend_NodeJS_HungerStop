@@ -1,10 +1,34 @@
 const Vendor = require('../models/Vendor')
+const cloudinary = require('cloudinary').v2
+const passport = require('passport')
 const bcrypt = require('bcrypt')
 const crypto = require('crypto')
 const nodemailer = require('nodemailer')
 const jwt = require('jsonwebtoken')
+const cookieParser = require("cookie-parser");
 
 require('dotenv').config();
+
+require('../middleware/passport')
+
+cloudinary.config({
+    cloud_name : process.env.cloud_name,
+    api_key : process.env.api_key,
+    api_secret : process.env.api_secret
+})
+
+const utc = (pp,fn,folder="hsprof") => {
+    const mfn = fn.replace(/\s+/g,"_")
+    return new Promise((resolve,reject) => {
+        const stream = cloudinary.uploader.upload_stream(
+            {folder,resource_type:"auto",public_id:mfn},
+            (error,result) => {
+                if(error) return reject(error)
+                return resolve(result)
+            }
+        )
+    })
+}
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -16,7 +40,7 @@ const transporter = nodemailer.createTransport({
 
 const vendorRegistration = async(req, res)=>{
     const {name, username, email, phoneno, password, verified,role } = req.body;
-
+    
     try{
         const checkemail = await Vendor.findOne({email});
         const checkusername = await Vendor.findOne({username});
@@ -29,7 +53,6 @@ const vendorRegistration = async(req, res)=>{
             const hashedpass = await bcrypt.hash(password, 10);
             const newVendor = new Vendor({
                 name,
-                username,
                 email,
                 phoneno,
                 password: hashedpass,
@@ -42,7 +65,7 @@ const vendorRegistration = async(req, res)=>{
         return res.status(200).json("Registered Successfully");
     }catch(error){
         console.log(error);
-        return res.status(400).json("An error occured");
+        return res.status(400).json("Error in Login");
     }
     
 }
@@ -311,4 +334,61 @@ const vt = async(req,res) => {
     }
 }
 
-module.exports = {vendorRegistration,vendorLogin,getallfirms,getsinglevendor,cpass,crole,reqotp,validateotp,forgotpassword,logout,hsl,vt}
+const googlereg = async(req,res) => {
+    passport.authenticate("google", { scope: ["profile", "email"] })
+}
+
+const callback = async (req, res) => {
+  try {
+    const googleUser = req.user; // ✅ from passport
+
+    if (!googleUser?.emails?.[0]?.value) {
+      return res.status(400).json("Google account has no email");
+    }
+
+    const email = googleUser.emails[0].value;
+    const pp = googleUser.photos[0].value;
+
+    let vendor = await Vendor.findOne({ email });
+
+    const fpp = await cloudinary.uploader.upload(pp, {
+        folder: "hsprof"
+    });
+    
+    if (!vendor) {
+      vendor = await Vendor.create({
+        name: googleUser.displayName,
+        email,
+        password: "-",
+        verified: "yes",
+        role: "customer",
+        profile:fpp.public_id,
+        token: "-"
+      });
+    }
+
+    const token = jwt.sign(
+      { vendorId: vendor._id },
+      process.env.JWT_SECRET,
+      { expiresIn: "1d" }
+    );
+
+    vendor.token = token;
+    await vendor.save();
+
+    
+    res.cookie("token", token, {
+      httpOnly: true,
+      sameSite: "lax",
+      secure: false,
+      maxAge: 24 * 60 * 60 * 1000
+    });
+
+    return res.redirect("http://localhost:5173/");
+  } catch (error) {
+    console.error(error);
+    res.status(500).json("Google login failed");
+  }
+};
+
+module.exports = {vendorRegistration,vendorLogin,getallfirms,getsinglevendor,cpass,crole,reqotp,validateotp,forgotpassword,logout,hsl,vt,googlereg,callback}

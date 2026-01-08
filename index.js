@@ -8,15 +8,19 @@ const cors = require('cors');
 const path = require('path');
 const Vendor = require('./models/Vendor');
 require('dotenv').config();
+const cookieParser = require("cookie-parser");
+const passport = require("passport")
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(passport.initialize());
 
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
   'https://hungerspot-backend-dashboard.vercel.app',
-  'https://hungerstop-rsds.vercel.app/'
+  'https://hungerstop-rsds.vercel.app',
 ];
 
 app.use(cors({
@@ -26,7 +30,8 @@ app.use(cors({
     } else {
       callback(new Error('Not allowed by CORS'));
     }
-  }
+  },
+  credentials: true
 }));
 
 
