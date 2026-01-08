@@ -11,6 +11,8 @@ require('dotenv').config();
 
 require('../middleware/passport')
 
+
+
 cloudinary.config({
     cloud_name : process.env.CLOUD_NAME, 
     api_key : process.env.api_key,
@@ -350,6 +352,8 @@ const callback = async (req, res) => {
     const pp = googleUser.photos[0].value;
 
     let vendor = await Vendor.findOne({ email });
+
+      console.log(process.env.CLOUD_NAME)
 
     const fpp = await cloudinary.uploader.upload(pp, {
         folder: "hsprof"
