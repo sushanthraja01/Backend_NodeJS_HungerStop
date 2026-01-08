@@ -6,7 +6,7 @@ passport.use(
     {
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: "http://localhost:2006/vendor/auth/google/callback",
+      callbackURL: "https://backend-nodejs-hungerstop.onrender.com/vendor/auth/google/callback",
       passReqToCallback: true
     },
     (req, accessToken, refreshToken, profile, done) => {
