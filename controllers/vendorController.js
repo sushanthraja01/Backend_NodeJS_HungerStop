@@ -12,25 +12,12 @@ require('dotenv').config();
 require('../middleware/passport')
 
 
-
+console.log(process.env.CLOUD_NAME)
 cloudinary.config({
-    cloud_name : process.env.CLOUD_NAME, 
+    cloud_name : process.env.CLOUD_NAME,
     api_key : process.env.api_key,
     api_secret : process.env.api_secret
 })
-
-const utc = (pp,fn,folder="hsprof") => {
-    const mfn = fn.replace(/\s+/g,"_")
-    return new Promise((resolve,reject) => {
-        const stream = cloudinary.uploader.upload_stream(
-            {folder,resource_type:"auto",public_id:mfn},
-            (error,result) => {
-                if(error) return reject(error)
-                return resolve(result)
-            }
-        )
-    })
-}
 
 const transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -352,8 +339,6 @@ const callback = async (req, res) => {
     const pp = googleUser.photos[0].value;
 
     let vendor = await Vendor.findOne({ email });
-
-      console.log(process.env.CLOUD_NAME)
 
     const fpp = await cloudinary.uploader.upload(pp, {
         folder: "hsprof"
