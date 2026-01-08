@@ -19,12 +19,9 @@ app.use(passport.initialize());
 const allowedOrigins = [
   'http://localhost:5173',
   'http://localhost:5174',
-  'https://hungerspot-backend-dashboard.vercel.app',
-<<<<<<< HEAD
+  'https://hungerspot-backend-dashboard.vercel.app'
   'https://hungerstop-rsds.vercel.app',
-=======
   'https://hungerstop-rsds.vercel.app'
->>>>>>> 8b3271fdddaf804e757eebb5252ccc26f593bc2c
 ];
 
 app.use(cors({
