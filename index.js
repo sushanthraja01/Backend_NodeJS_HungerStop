@@ -22,7 +22,7 @@ const allowedOrigins = [
   'https://hungerspot-backend-dashboard.vercel.app',
   'https://hungerstop-rsds.vercel.app',
   'https://hungerstop-rsds.vercel.app',
-  'https://rsds-hunger-stop.vercel.app/'
+  'https://rsds-hunger-stop.vercel.app'
 ];
 
 app.use(cors({
