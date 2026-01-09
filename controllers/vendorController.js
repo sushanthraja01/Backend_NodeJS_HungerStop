@@ -329,7 +329,10 @@ const googlereg = async(req,res) => {
 
 const callback = async (req, res) => {
   try {
-    const googleUser = req.user; // ✅ from passport
+    const { state } = req.query;
+    let redirectUrl = "http://localhost:5173";
+    redirectUrl = JSON.parse(decodeURIComponent(state)).redirectUrl
+    const googleUser = req.user;
 
     if (!googleUser?.emails?.[0]?.value) {
       return res.status(400).json("Google account has no email");
@@ -373,7 +376,7 @@ const callback = async (req, res) => {
       maxAge: 24 * 60 * 60 * 1000
     });
 
-    return res.redirect("http://localhost:5173/");
+    return res.redirect(redirectUrl);
   } catch (error) {
     console.error(error);
     res.status(500).json("Google login failed");

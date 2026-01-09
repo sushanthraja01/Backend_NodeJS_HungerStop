@@ -7,7 +7,7 @@ const passport = require("passport")
 
 router.post("/register",vendorController.vendorRegistration);
 router.post("/login",vendorController.vendorLogin);
-router.get("/auth/google",passport.authenticate("google", { scope: ["profile", "email"] }));
+router.get("/auth/google",(req,res,next)=>{passport.authenticate("google", { scope: ["profile", "email"], state: req.query.state })(req,res,next);});
 router.get("/auth/google/callback",passport.authenticate("google", { session: false }),vendorController.callback);
 router.patch("/changerole",vendorController.crole);
 router.patch("/changepassword",verifyToken,vendorController.cpass);
