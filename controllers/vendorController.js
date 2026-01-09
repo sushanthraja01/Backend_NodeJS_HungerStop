@@ -330,8 +330,17 @@ const googlereg = async(req,res) => {
 const callback = async (req, res) => {
   try {
     const { state } = req.query;
-    let redirectUrl = "http://localhost:5173";
-    redirectUrl = JSON.parse(decodeURIComponent(state)).redirectUrl
+
+    let redirectUrl = "https://rsds-hunger-stop.vercel.app/";
+
+    if (state) {
+      try {
+        redirectUrl = JSON.parse(decodeURIComponent(state)).redirectUrl || redirectUrl;
+      } catch (err) {
+        console.error("Invalid state value:", state);
+      }
+    }
+
     const googleUser = req.user;
 
     if (!googleUser?.emails?.[0]?.value) {
