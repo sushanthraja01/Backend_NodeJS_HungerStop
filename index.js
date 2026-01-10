@@ -52,12 +52,12 @@ app.use("/uploads", express.static('uploads'));
 
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.gmail.com",
+  host: "smtp-relay.brevo.com",
   port: 587,
   secure: false,
   auth: {
-    user: process.env.email_user,
-    pass: process.env.email_pass
+    user: process.env.brevo_user,
+    pass: process.env.brevo_pass
   }
 });
 
