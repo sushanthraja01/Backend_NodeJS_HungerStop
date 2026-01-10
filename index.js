@@ -56,10 +56,14 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false,
   auth: {
-    user:process.env.brevo_user,
-    pass:process.env.brevo_pass
+    user: process.env.BREVO_USER,
+    pass: process.env.BREVO_PASS
+  },
+  tls: {
+    rejectUnauthorized: false
   }
 });
+
 
 app.get("/smtp-test", async (req, res) => {
   try {
