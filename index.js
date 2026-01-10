@@ -10,6 +10,8 @@ const Vendor = require('./models/Vendor');
 require('dotenv').config();
 const cookieParser = require("cookie-parser");
 const passport = require("passport")
+const nodemailer = require("nodemailer");
+
 
 app.use(express.json());
 app.set('trust proxy', 1);
