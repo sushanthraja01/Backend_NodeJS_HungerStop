@@ -56,12 +56,11 @@ const transporter = nodemailer.createTransport({
   port: 587,
   secure: false,
   auth: {
-    user: process.env.brevo_user,
-    pass: process.env.brevo_pass
+    user: "9fb797001@smtp-brevo.com",
+    pass: "8fkyBFmEsO427QMA"
   }
 });
 
-// SMTP Test Route
 app.get("/smtp-test", async (req, res) => {
   try {
     await transporter.verify();
