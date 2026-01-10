@@ -20,11 +20,16 @@ cloudinary.config({
 })
 
 const transporter = nodemailer.createTransport({
-    service: 'gmail',
-    auth:{
-        user: process.env.email_user,
-        pass: process.env.email_pass
-    }
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.email_user,
+    pass: process.env.email_pass,
+  },
+  tls: {
+    rejectUnauthorized: false
+  }
 });
 
 const vendorRegistration = async(req, res)=>{
