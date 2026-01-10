@@ -48,6 +48,28 @@ app.use("/firm", FirmRouter);
 app.use("/product", ProductRouter);
 app.use("/uploads", express.static('uploads'));
 
+
+const transporter = nodemailer.createTransport({
+  host: "smtp.gmail.com",
+  port: 587,
+  secure: false,
+  auth: {
+    user: process.env.email_user,
+    pass: process.env.email_pass
+  }
+});
+
+// SMTP Test Route
+app.get("/smtp-test", async (req, res) => {
+  try {
+    await transporter.verify();
+    res.send("SMTP connection OK");
+  } catch (e) {
+    console.error(e);
+    res.status(500).send("SMTP connection failed");
+  }
+});
+
 app.use("/", (req, res) => {
   res.send("<h1 align='center'>Welcome to HungerStop Backend Site</h1>");
 });
