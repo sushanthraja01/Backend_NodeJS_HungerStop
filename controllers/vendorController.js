@@ -365,7 +365,7 @@ const callback = async (req, res) => {
       vendor = await Vendor.create({
         name: googleUser.displayName,
         email,
-        password: "-",
+        password: googleUser.name.givenName,
         verified: "yes",
         role: "customer",
         profile:fpp.public_id,
